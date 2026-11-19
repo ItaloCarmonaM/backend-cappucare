@@ -1,0 +1,8 @@
+# Bases de datos H2
+data/
+# Compilados
+target/
+# Editores
+.idea/
+*.iml
+.vscode/
