@@ -1,6 +1,6 @@
 # Cappucare – Microservicios
 
-Microservicios desarrollados en Spring Boot que respaldan la app móvil de Cappucare  de control de
+Microservicios desarrollados en Spring Boot que respaldan la app móvil de Cappucare de control de
 existencias de productos e insumos médicos.
 
 Repositorio de la aplicación: https://github.com/ItaloCarmonaM/Cappucare
@@ -8,12 +8,7 @@ Repositorio de la aplicación: https://github.com/ItaloCarmonaM/Cappucare
 
 ## Integrantes
 
-| Nombre | Aporte en este repositorio |
-|---|---|
-| Ítalo Carmona | Desarrollo de `ms-usuarios` y `ms-inventario` |
-| Isahac Zapata | Colección de pruebas de `ms-usuarios` (Postman) |
-| Luciano | Colección de pruebas de `ms-inventario` (Postman) |
-
+Ítalo Carmona, Luciano Sepulveda e Isahac Zapata
 ## Microservicios
 
 | Microservicio | Puerto | Base de datos | Responsabilidad |
@@ -28,14 +23,14 @@ Cada microservicio es independiente: tiene su propio proyecto, puerto y base de 
 
 - Java 17 o superior
 - Spring Boot 4 (Spring Web, Spring Data JPA, Validation)
-- H2 en modo archivo (los datos se conservan entre ejecuciones y no requiere instalación)
+- H2 en modo archivo
 - Lombok
 - BCrypt (`spring-security-crypto`) para encriptar las claves
 
 ## Estructura del repositorio
 
 ```
-Cappucare-Microservicios/
+backend-cappucare/
 ├── ms-usuarios/
 │   └── src/main/java/com/example/ms_usuarios/
 │       ├── controller/   Endpoints REST
@@ -73,11 +68,6 @@ Cappucare-Microservicios/
    ./mvnw spring-boot:run
    ```
 
-En Windows se usa `mvnw.cmd spring-boot:run`. Cuando termina de iniciar aparece `Started ...Application` en la consola.
-También se pueden ejecutar desde el editor con el botón **Run** de la clase principal.
-
-La primera vez se crean las tablas y se cargan los datos de prueba.
-
 ### Consola de la base de datos
 
 Cada microservicio incluye la consola web de H2 para ver las tablas:
@@ -89,10 +79,15 @@ Cada microservicio incluye la consola web de H2 para ver las tablas:
 
 ### Conexión con la app
 
-El emulador de Android accede al computador mediante `10.0.2.2`:
+La app necesita llegar al computador donde corren los microservicios. La dirección depende de dónde se ejecute:
 
-- `http://10.0.2.2:8081/` → `ms-usuarios`
-- `http://10.0.2.2:8082/` → `ms-inventario`
+| Dónde corre la app | Dirección | Requisitos |
+|---|---|---|
+| Emulador de Android | `10.0.2.2` | Ninguno: es la dirección del computador vista desde el emulador |
+
+- `http://10.0.2.2:8081/` → `ms-usuarios` (emulador)
+- `http://10.0.2.2:8082/` → `ms-inventario` (emulador)
+
 
 ## Datos de prueba
 
@@ -115,6 +110,13 @@ Los errores siempre responden con este cuerpo:
 { "mensaje": "Stock insuficiente: disponible 5" }
 ```
 
+| Código | Cuándo ocurre |
+|---|---|
+| 400 | Falla una validación del cuerpo, el JSON no es válido, o se rompe RN3 o RN5 |
+| 401 | Credenciales incorrectas en el login |
+| 404 | El usuario o el producto no existe |
+| 409 | Código de producto o correo ya en uso; producto con movimientos que se intenta eliminar |
+
 ### ms-usuarios (puerto 8081)
 
 | Método | Endpoint | Cuerpo | Respuesta |
@@ -134,12 +136,12 @@ Los errores siempre responden con este cuerpo:
 
 | Método | Endpoint | Cuerpo | Respuesta |
 |---|---|---|---|
-| GET | `/api/productos?buscar=` | — | Lista de productos (`buscar` es opcional) |
+| GET | `/api/productos?buscar=` | — | Lista de productos por nombre o código (`buscar` es opcional) |
 | GET | `/api/productos/stock-bajo` | — | Productos en stock bajo o agotados |
 | GET | `/api/productos/{id}` | — | Producto |
 | POST | `/api/productos` | Producto (sin `id`) | Producto (201) |
 | PUT | `/api/productos/{id}` | Producto | Producto (no modifica la cantidad) |
-| DELETE | `/api/productos/{id}` | — | 204 |
+| DELETE | `/api/productos/{id}` | — | 204 (409 si tiene movimientos) |
 | GET | `/api/movimientos` | — | Historial, del más reciente al más antiguo |
 | POST | `/api/movimientos` | Movimiento | Producto actualizado y aviso de nivel mínimo (201) |
 
@@ -175,7 +177,7 @@ Valores permitidos: `perfil` = `ENCARGADO` | `CONSULTOR` · `tipo` = `INGRESO` |
 
 | N° | Regla | Cómo se aplica |
 |---|---|---|
-| RN1 | El código del producto es único y obligatorio | Responde `409` si el código ya existe |
+| RN1 | El código del producto es único y obligatorio | Responde `409` si el código ya existe (al crear y al editar) |
 | RN2 | La cantidad nunca es negativa | Validación `@Min(0)` al crear un producto |
 | RN3 | Una salida no puede superar el stock | Responde `400` con el stock disponible |
 | RN4 | La cantidad de un movimiento es mayor a 0 | Validación `@Positive` |
